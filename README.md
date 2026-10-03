@@ -1,97 +1,62 @@
-# Gemma Food Label API
+# Vitalis
 
-Production-oriented API for the hackathon food-analysis path:
+Vitalis is a Hack Day health-assessment prototype combining three tabular risk models, a local research chest-X-ray model, Gemma health summaries, and personalized food-label guidance. It is an educational prototype, not a medical device.
 
-`Image Upload -> Gemma 4 -> Structured Nutrition JSON -> UI`
+## Run the integrated app
 
-## 1. Setup
-
-```bash
-python -m venv .venv
-```
-
-Windows PowerShell:
-
-```powershell
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-copy .env.example .env
-```
-
-Edit `.env`:
-
-```env
-GEMINI_API_KEY=YOUR_KEY
-GEMMA_MODEL=THE_EXACT_GEMMA_4_MODEL_ID_CONFIRMED_BY_ORGANIZERS
-```
-
-Do not guess the model ID: the challenge brief specifically says to confirm available Gemma 4 access with organizers.
-
-## 2. Run
+Create the environment and install dependencies:
 
 ```bash
-uvicorn app.main:app --reload
+npm install
+cp .env.example .env
+python3 -m venv .venv
+.venv/bin/pip install -r models/requirements.txt
 ```
 
-Open: http://127.0.0.1:8000
+Add `GEMINI_API_KEY` to `.env`, then start the Python model service:
 
-API documentation: http://127.0.0.1:8000/docs
-
-Primary UX endpoint: `POST /api/v1/food/analyze` with multipart field `file`.
-`POST /analyze` remains available for backward compatibility.
-
-## 3. Operational behavior
-
-- Accepts verified JPG, PNG, and WEBP payloads up to 8 MB.
-- Limits concurrent upstream calls and retries temporary Gemini capacity errors.
-- Returns `400` for invalid input, `413` for oversized payloads, `503` for unavailable/configuration failures, and `502` for malformed upstream responses.
-- Sends an `X-Request-ID` header on every response. Configure browser access with `ALLOWED_ORIGINS` in `.env`.
-
-## 4. First test
-
-Use one clear photo of a packaged-food nutrition label.
-
-Success criteria:
-- request completes
-- valid JSON is returned
-- visible nutrition values match the label
-- invisible values are `null`
-- missing/uncertain values are not hallucinated
-
-## 5. Suggested dataset
-
-Place your own test images in `tests/fixtures/` using the filenames in `test_cases.json`.
-Start with six images, then expand to 10-15.
-
-## 6. Architecture
-
-```text
-Food image
-   |
-   v
-FastAPI /analyze
-   |
-   v
-Gemma 4 via Gemini API
-   |
-   v
-Pydantic JSON schema
-   |
-   v
-Structured food/nutrition data
-   |
-   v
-Browser result
+```bash
+.venv/bin/uvicorn models.server:app --host 127.0.0.1 --port 8000
 ```
 
-## Later phase (NOT in this smoke test)
+In another terminal, start the website:
 
-```text
-Structured nutrition + health context from ML models
-                    |
-                    v
-              Gemma reasoning
-                    |
-                    v
-       Personalized food recommendation
+```bash
+npm run dev
 ```
+
+The Python service exposes `/predict` and `/xray`. TorchXRayVision downloads and caches the approximately 28 MB `densenet121-res224-all` checkpoint on the first X-ray scan. The website defaults to `http://127.0.0.1:8000/predict`; use `MODEL_API_URL` or `XRAY_API_URL` to override the endpoints. Food analysis defaults to `gemma-4-26b-a4b-it`; use `GEMMA_FAST_MODEL` to override it. Keep all credentials server-side.
+
+## Integrated API routes
+
+- `POST /api/assess`: profile to three risk scores, combined health score, and BMI.
+- `POST /api/summary`: profile and assessment to a Gemma health summary.
+- `POST /api/food/extract`: image to visibly extracted, validated nutrition facts.
+- `POST /api/food/recommend`: extracted label plus complete JSON health report to personalized guidance.
+- `POST /api/scan`: chest-X-ray image plus separate health context to research model observations.
+
+Images use `{name,mimeType,data}` with a base64 data URL and support JPG, PNG, and WebP up to the UI limit of 5 MB.
+
+## Food-label flow
+
+Food analysis has two explicit stages. Gemma first extracts only visible label facts, including confidence, allergens, missing fields, ingredients, and nutrients. The app normalizes duplicate or oversized model output for reliable charts. It then sends those facts together with the complete JSON health report, profile, health score, and three risk scores to Gemma. The response contains a direct Yes/Occasionally/No/Unknown answer, reasoning, portion guidance, benefits, cautions, and a transparent food-fit indicator that is not a medical probability.
+
+The website shows progress and safe diagnostic details for each stage. Server errors contain a matching request ID without exposing secrets.
+
+## Model contract
+
+The tabular service returns `{scores:{obesity,diabetes,heart_disease}}` on a 0–100 scale. Diabetes and heart use positive-class probability. Obesity risk combines the overweight and obesity classes. The overall health score is `100 - mean(the three risks)` and is a summary indicator, not a validated clinical probability.
+
+Chest X-rays are scored locally with the research-only TorchXRayVision DenseNet adapted from the Hacktoberfest26 source repository. The complete Vitalis report is retained as separate context and never changes the raw X-ray outputs. Scores are not diagnoses or clinical probabilities and always require qualified review.
+
+## Reports and local session
+
+The results page exports HTML and JSON reports containing the profile, BMI, risk scores, health score, AI summary, recommendations, and completed food analysis. Structured session data is stored under `vitalis-session-report` in browser localStorage so Food Lens can reuse the health context after a refresh. Uploaded image bytes are never stored there.
+
+## Reference services
+
+The original standalone FastAPI services from [Hacktoberfest26](https://github.com/mallurivikas/Hacktoberfest26) are retained in `app/` and `medical-image-analysis/` for comparison. The integrated Vitalis runtime uses the Next API routes and the combined `models.server` service described above.
+
+Challenge: https://github.com/reacthyderabad/hacktoberfest-hack-day-2026/blob/main/challenges/gemma-4.md
+
+Gemini API reference: https://ai.google.dev/api/generate-content
