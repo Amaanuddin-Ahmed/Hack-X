@@ -1,0 +1,8 @@
+gradio>=5.0.0
+spaces
+torch==2.9.1
+torchvision>=0.24.0
+torchxrayvision
+scikit-image
+numpy
+Pillow

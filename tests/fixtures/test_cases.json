@@ -1,0 +1,38 @@
+[
+  {
+    "id": "clear_nutrition_label",
+    "image": "01_clear_nutrition_label.jpg",
+    "purpose": "Baseline extraction of serving size, calories, macros, sodium",
+    "expected_behavior": "label_detected=true; visible values extracted; no guessing"
+  },
+  {
+    "id": "ingredients_only",
+    "image": "02_ingredients_only.jpg",
+    "purpose": "Ingredient extraction when nutrition panel is absent",
+    "expected_behavior": "ingredients populated; unknown nutrition fields null"
+  },
+  {
+    "id": "tilted_label",
+    "image": "03_tilted_label.jpg",
+    "purpose": "Robustness to mild rotation",
+    "expected_behavior": "extract most visible fields; confidence medium/high"
+  },
+  {
+    "id": "blurry_label",
+    "image": "04_blurry_label.jpg",
+    "purpose": "Uncertainty handling",
+    "expected_behavior": "confidence low/medium; missing fields listed; no invented values"
+  },
+  {
+    "id": "front_of_pack_only",
+    "image": "05_front_of_pack.jpg",
+    "purpose": "Product recognition without label",
+    "expected_behavior": "is_food=true; label_detected=false; nutrition mostly null"
+  },
+  {
+    "id": "non_food",
+    "image": "06_non_food.jpg",
+    "purpose": "Negative control",
+    "expected_behavior": "is_food=false; label_detected=false"
+  }
+]

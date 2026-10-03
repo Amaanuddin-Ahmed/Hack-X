@@ -1,0 +1,26 @@
+# Credentials and local configuration
+.env
+*.env.local
+*.pem
+*.key
+
+# Python environments and generated files
+.venv/
+**/.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Local uploads and potentially sensitive image data
+sample datasets/
+tests/fixtures/*
+!tests/fixtures/test_cases.json
+medical-image-analysis/tests/fixtures/*
+!medical-image-analysis/tests/fixtures/test_cases.json
+
+# Editor and operating-system files
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
