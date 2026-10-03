@@ -1,62 +1,192 @@
-# Vitalis
+<p align="center">
+  <img src="public/logo.svg" alt="Vitalis logo" width="72" />
+</p>
 
-Vitalis is a Hack Day health-assessment prototype combining three tabular risk models, a local research chest-X-ray model, Gemma health summaries, and personalized food-label guidance. It is an educational prototype, not a medical device.
+<h1 align="center">Vitalis</h1>
 
-## Run the integrated app
+<p align="center">
+  <strong>A little context. A clearer picture.</strong><br />
+  AI-assisted health insights, nutrition-label guidance, and research medical imaging in one private workspace.
+</p>
 
-Create the environment and install dependencies:
+<p align="center">
+  <img alt="Next.js" src="https://img.shields.io/badge/Next.js-16-111827?logo=next.js" />
+  <img alt="React" src="https://img.shields.io/badge/React-19-0b7285?logo=react" />
+  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-Python-05998b?logo=fastapi" />
+  <img alt="Gemma" src="https://img.shields.io/badge/AI-Gemma-3b82f6" />
+  <img alt="Status" src="https://img.shields.io/badge/status-hackathon%20prototype-f97316" />
+</p>
+
+![Vitalis health intelligence dashboard](public/readme/vitalis-hero.png)
+
+> [!IMPORTANT]
+> Vitalis is an educational hackathon prototype—not a medical device. Its scores and generated content are not diagnoses and must not replace advice from a qualified healthcare professional.
+
+## Why Vitalis?
+
+Health data often lives in disconnected forms: lab values, lifestyle details, food labels, and medical images. Vitalis brings those signals into a single, understandable workflow while keeping each model's output transparent and appropriately scoped.
+
+- **One connected assessment** — combines heart disease, diabetes, and overweight/obesity risk estimates into a clear health overview.
+- **Plain-language context** — uses Gemma to explain the assessment and suggest practical next steps.
+- **Food Lens** — extracts visible nutrition-label facts before generating personalized guidance from the completed health report.
+- **Research X-ray view** — presents local chest-X-ray model observations separately from the tabular health score.
+- **Portable reports** — exports the complete session as human-readable HTML or structured JSON.
+- **Privacy-minded sessions** — stores structured results in browser `localStorage`; uploaded image bytes are not persisted there.
+
+## Product tour
+
+| Health profile | Your insights | Medical imaging | Food Lens |
+| --- | --- | --- | --- |
+| Capture clinical and lifestyle inputs expected by the three models. | Review individual risk estimates, a combined score, and a Gemma summary. | Add a de-identified chest X-ray for research-only observations. | Turn a nutrition label into extracted facts and health-aware guidance. |
+
+## How it works
+
+```mermaid
+flowchart LR
+    A[Health profile] --> B[FastAPI model service]
+    B --> C[Three risk scores]
+    C --> D[Combined health score]
+    C --> E[Gemma summary]
+    D --> E
+    E --> F[HTML and JSON report]
+    E --> G[Food Lens]
+    H[Nutrition label] --> G
+    I[Chest X-ray] --> J[Local research model]
+    J --> K[Separate image observations]
+```
+
+The tabular service returns heart disease, diabetes, and overweight/obesity scores on a `0–100` scale. Vitalis calculates the summary indicator as:
+
+```text
+health score = 100 − mean(heart risk, diabetes risk, obesity risk)
+```
+
+Diabetes and heart disease use positive-class probability. Obesity risk combines the trained model's overweight and obesity classes. The result is a product-level summary indicator, not a validated clinical probability.
+
+## Tech stack
+
+- **Web:** Next.js 16, React 19, TypeScript, Tailwind CSS, Recharts, Motion, and GSAP
+- **API layer:** Next route handlers for assessment, summary, food analysis, and imaging
+- **Model service:** FastAPI, pandas, scikit-learn/joblib, Pillow, PyTorch, and TorchXRayVision
+- **Generative AI:** Gemma through the Gemini API
+- **Local runtime:** Vinext, Vite, and Wrangler
+
+## Getting started
+
+### Prerequisites
+
+- Node.js `22.13.0` or newer
+- Python 3 with `venv`
+- A Gemini API key
+- The local diabetes model file: `models/diabetes_random_forest (1).pkl`
+
+The diabetes model is intentionally ignored by Git because of its size. Place your local copy at the exact path above before starting the model service. The heart and obesity model artifacts are included in the repository.
+
+### 1. Install dependencies
 
 ```bash
+git clone https://github.com/mallurivikas/Hacktoberfest26.git
+cd Hacktoberfest26
 npm install
-cp .env.example .env
+
 python3 -m venv .venv
 .venv/bin/pip install -r models/requirements.txt
 ```
 
-Add `GEMINI_API_KEY` to `.env`, then start the Python model service:
+### 2. Configure the environment
+
+```bash
+cp .env.example .env
+```
+
+Set your server-side Gemini credential in `.env`:
+
+```dotenv
+GEMINI_API_KEY=your_api_key_here
+```
+
+The checked-in defaults connect the web app to the local model service at `127.0.0.1:8000`. You can override `MODEL_API_URL`, `XRAY_API_URL`, or `GEMMA_FAST_MODEL` when needed. Never expose credentials in client-side code or commit your `.env` file.
+
+### 3. Start both services
+
+Terminal one—the local model service:
 
 ```bash
 .venv/bin/uvicorn models.server:app --host 127.0.0.1 --port 8000
 ```
 
-In another terminal, start the website:
+Terminal two—the web application:
 
 ```bash
 npm run dev
 ```
 
-The Python service exposes `/predict` and `/xray`. TorchXRayVision downloads and caches the approximately 28 MB `densenet121-res224-all` checkpoint on the first X-ray scan. The website defaults to `http://127.0.0.1:8000/predict`; use `MODEL_API_URL` or `XRAY_API_URL` to override the endpoints. Food analysis defaults to `gemma-4-26b-a4b-it`; use `GEMMA_FAST_MODEL` to override it. Keep all credentials server-side.
+Open the local URL shown in the terminal. For a quick tour, choose **Explore with sample data**; sample scores are illustrative and do not invoke the prediction models.
 
-## Integrated API routes
+> [!NOTE]
+> TorchXRayVision downloads and caches the approximately 28 MB `densenet121-res224-all` checkpoint the first time an X-ray is analyzed.
 
-- `POST /api/assess`: profile to three risk scores, combined health score, and BMI.
-- `POST /api/summary`: profile and assessment to a Gemma health summary.
-- `POST /api/food/extract`: image to visibly extracted, validated nutrition facts.
-- `POST /api/food/recommend`: extracted label plus complete JSON health report to personalized guidance.
-- `POST /api/scan`: chest-X-ray image plus separate health context to research model observations.
+## API overview
 
-Images use `{name,mimeType,data}` with a base64 data URL and support JPG, PNG, and WebP up to the UI limit of 5 MB.
+| Route | Purpose |
+| --- | --- |
+| `POST /api/assess` | Sends a completed profile to the three risk models and returns scores, BMI, and the combined indicator. |
+| `POST /api/summary` | Turns a profile and assessment into a concise Gemma health summary. |
+| `POST /api/food/extract` | Extracts only visible, validated nutrition facts from a label image. |
+| `POST /api/food/recommend` | Combines extracted label facts with the complete health report for personalized guidance. |
+| `POST /api/scan` | Sends a chest-X-ray image and separate health context to the research imaging service. |
 
-## Food-label flow
+Image requests use `{ name, mimeType, data }`, where `data` is a base64 data URL. The UI accepts JPG, PNG, and WebP images up to 5 MB.
 
-Food analysis has two explicit stages. Gemma first extracts only visible label facts, including confidence, allergens, missing fields, ingredients, and nutrients. The app normalizes duplicate or oversized model output for reliable charts. It then sends those facts together with the complete JSON health report, profile, health score, and three risk scores to Gemma. The response contains a direct Yes/Occasionally/No/Unknown answer, reasoning, portion guidance, benefits, cautions, and a transparent food-fit indicator that is not a medical probability.
+The Python service exposes:
 
-The website shows progress and safe diagnostic details for each stage. Server errors contain a matching request ID without exposing secrets.
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /health` | Confirms that the local service and its three tabular models are available. |
+| `POST /predict` | Returns `{ scores: { obesity, diabetes, heart_disease }, bmi }`. |
+| `POST /xray` | Returns research-only observations from a de-identified chest X-ray. |
 
-## Model contract
+## Food Lens pipeline
 
-The tabular service returns `{scores:{obesity,diabetes,heart_disease}}` on a 0–100 scale. Diabetes and heart use positive-class probability. Obesity risk combines the overweight and obesity classes. The overall health score is `100 - mean(the three risks)` and is a summary indicator, not a validated clinical probability.
+Food analysis deliberately runs in two stages:
 
-Chest X-rays are scored locally with the research-only TorchXRayVision DenseNet adapted from the Hacktoberfest26 source repository. The complete Vitalis report is retained as separate context and never changes the raw X-ray outputs. Scores are not diagnoses or clinical probabilities and always require qualified review.
+1. Gemma extracts only what is visible on the uploaded label, including nutrients, ingredients, allergens, missing fields, and confidence.
+2. Vitalis normalizes the response, then combines those facts with the complete JSON health report to generate a `Yes`, `Occasionally`, `No`, or `Unknown` recommendation, portion guidance, benefits, and watchouts.
 
-## Reports and local session
+The displayed food-fit score is an explanatory product indicator—not a medical probability.
 
-The results page exports HTML and JSON reports containing the profile, BMI, risk scores, health score, AI summary, recommendations, and completed food analysis. Structured session data is stored under `vitalis-session-report` in browser localStorage so Food Lens can reuse the health context after a refresh. Uploaded image bytes are never stored there.
+## Reports and local session data
 
-## Reference services
+Vitalis exports:
 
-The original standalone FastAPI services from [Hacktoberfest26](https://github.com/mallurivikas/Hacktoberfest26) are retained in `app/` and `medical-image-analysis/` for comparison. The integrated Vitalis runtime uses the Next API routes and the combined `models.server` service described above.
+- an HTML report that can be printed or saved as PDF; and
+- a JSON report containing the profile, BMI, assessment, AI summary, food analysis, and medical-image analysis.
 
-Challenge: https://github.com/reacthyderabad/hacktoberfest-hack-day-2026/blob/main/challenges/gemma-4.md
+Structured session data is stored under `vitalis-session-report` in browser `localStorage`, allowing Food Lens to reuse health context after a refresh. Uploaded image bytes are not included in that stored record.
 
-Gemini API reference: https://ai.google.dev/api/generate-content
+## Safety and privacy
+
+- Remove names, IDs, and other personal identifiers before uploading any medical image.
+- Uploaded images are sent for analysis only after the user selects **Analyze**.
+- Raw X-ray outputs remain separate from the three-model combined health score.
+- Server errors expose a request ID for troubleshooting without returning credentials.
+- Keep Gemini and model-service credentials server-side.
+
+## Useful commands
+
+```bash
+npm run dev      # start the local web app
+npm run build    # create a production build
+npm run start    # run the built app locally with Wrangler
+npm run lint     # run ESLint
+```
+
+## Project references
+
+- [Hacktoberfest26 repository](https://github.com/mallurivikas/Hacktoberfest26)
+- [Gemma 4 challenge](https://github.com/reacthyderabad/hacktoberfest-hack-day-2026/blob/main/challenges/gemma-4.md)
+- [Gemini API reference](https://ai.google.dev/api/generate-content)
+
+---
+
+<p align="center">Built for Hacktoberfest Hack Day 2026 with a focus on clarity, context, and responsible health communication.</p>
