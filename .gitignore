@@ -59,4 +59,4 @@ Thumbs.db
 next-env.d.ts
 
 
-models/*.pkl
+models/diabetes_random_forest (1).pkl
