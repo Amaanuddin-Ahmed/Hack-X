@@ -1,43 +1,72 @@
-"""Research-only chest X-ray scoring service."""
+"""Research-only chest X-ray scoring with a compact ONNX CPU runtime."""
 
 from __future__ import annotations
 
-from functools import lru_cache
 from io import BytesIO
-import os
 from pathlib import Path
 
 import numpy as np
+import onnxruntime as ort
 from PIL import Image, UnidentifiedImageError
+from skimage.transform import resize
 
 from schemas import Finding, HealthReport, XrayAnalysis
 
 MODEL_NAME = "densenet121-res224-all"
-DEFAULT_CACHE = Path(__file__).resolve().parent / "model_cache"
+MODEL_PATH = Path(__file__).resolve().parent / "model.onnx"
+PATHOLOGIES = [
+    "Atelectasis",
+    "Consolidation",
+    "Infiltration",
+    "Pneumothorax",
+    "Edema",
+    "Emphysema",
+    "Fibrosis",
+    "Effusion",
+    "Pneumonia",
+    "Pleural_Thickening",
+    "Cardiomegaly",
+    "Nodule",
+    "Mass",
+    "Hernia",
+    "Lung Lesion",
+    "Fracture",
+    "Lung Opacity",
+    "Enlarged Cardiomediastinum",
+]
+OPERATING_THRESHOLDS = np.asarray(
+    [
+        0.07422872,
+        0.038290843,
+        0.09814756,
+        0.0098118475,
+        0.023601074,
+        0.0022490358,
+        0.010060724,
+        0.103246614,
+        0.056810737,
+        0.026791653,
+        0.050318155,
+        0.023985857,
+        0.01939503,
+        0.042889766,
+        0.053369623,
+        0.035975814,
+        0.20204692,
+        0.05015312,
+    ],
+    dtype=np.float32,
+)
 
 
 class ImageValidationError(ValueError):
     pass
 
 
-@lru_cache(maxsize=1)
-def load_model():
-    import torch
-    import torchxrayvision as xrv
-
-    cache_dir = Path(os.getenv("XRAY_MODEL_CACHE", str(DEFAULT_CACHE)))
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = xrv.models.DenseNet(
-        weights=MODEL_NAME,
-        cache_dir=str(cache_dir),
-    ).to(device).eval()
-    return model, device
+SESSION = ort.InferenceSession(str(MODEL_PATH), providers=["CPUExecutionProvider"])
 
 
 def prepare_image(payload: bytes):
-    import torch
-    import torchxrayvision as xrv
-
     try:
         with Image.open(BytesIO(payload)) as candidate:
             candidate.verify()
@@ -49,22 +78,34 @@ def prepare_image(payload: bytes):
         raise ImageValidationError(
             "Upload a readable chest X-ray at least 32 pixels wide and high."
         )
-    image = xrv.datasets.normalize(grayscale, 255).astype(np.float32)[None, ...]
-    image = xrv.datasets.XRayCenterCrop()(image)
-    image = xrv.datasets.XRayResizer(224)(image)
-    return torch.from_numpy(image).unsqueeze(0)
+    image = (((grayscale.astype(np.float32) / 255.0) * 2.0) - 1.0) * 1024.0
+    image = image[None, ...]
+    _, height, width = image.shape
+    crop_size = min(height, width)
+    start_x = width // 2 - crop_size // 2
+    start_y = height // 2 - crop_size // 2
+    image = image[:, start_y:start_y + crop_size, start_x:start_x + crop_size]
+    image = resize(
+        image,
+        (1, 224, 224),
+        mode="constant",
+        preserve_range=True,
+    ).astype(np.float32)
+    return image[None, ...]
 
 
 def analyze_chest_xray(payload: bytes, report: HealthReport | None) -> XrayAnalysis:
-    import torch
-
     tensor = prepare_image(payload)
-    model, device = load_model()
-    with torch.no_grad():
-        output = model(tensor.to(device))[0].detach().cpu().numpy()
+    logits = SESSION.run(["logits"], {"image": tensor})[0][0]
+    raw = 1.0 / (1.0 + np.exp(-logits))
+    output = np.where(
+        raw < OPERATING_THRESHOLDS,
+        raw / (OPERATING_THRESHOLDS * 2.0),
+        1.0 - ((1.0 - raw) / ((1.0 - OPERATING_THRESHOLDS) * 2.0)),
+    )
     scores = {
         label: round(float(value), 4)
-        for label, value in zip(model.pathologies, output)
+        for label, value in zip(PATHOLOGIES, output)
     }
     top = sorted(scores.items(), key=lambda item: item[1], reverse=True)[:3]
     findings = [Finding(label=label, score=score) for label, score in top]
@@ -85,7 +126,7 @@ def analyze_chest_xray(payload: bytes, report: HealthReport | None) -> XrayAnaly
         )
     return XrayAnalysis(
         model=MODEL_NAME,
-        device=device,
+        device="cpu",
         model_scores=scores,
         highest_scoring_labels=findings,
         integrated_summary=integrated,
