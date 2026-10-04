@@ -49,7 +49,6 @@ export default function SquishSwitch({
   const trackRef = useRef(null);
   const grip = useRef(null);
   const onRef = useRef(on);
-  onRef.current = on;
   const skipClick = useRef(false);
   const autoId = useId();
   const buttonId = id ?? autoId;
@@ -61,6 +60,10 @@ export default function SquishSwitch({
   const stretchOf = v => 1 + Math.min(MAX_STRETCH, Math.abs(v) / STRETCH_SPEED) * gain;
   const scaleX = useTransform([flow, swell], ([v, h]) => stretchOf(v) * h);
   const scaleY = useTransform([flow, swell], ([v, h]) => h / stretchOf(v));
+
+  useEffect(() => {
+    onRef.current = on;
+  }, [on]);
 
   const commit = next => {
     if (next === onRef.current) return;
@@ -197,4 +200,3 @@ export default function SquishSwitch({
     </span>
   );
 }
-
