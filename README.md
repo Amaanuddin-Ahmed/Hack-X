@@ -130,6 +130,11 @@ For a lightweight tabular-model deployment, use `models/requirements.txt`. The
 X-ray dependencies are intentionally isolated in `models/requirements-xray.txt`
 because PyTorch is too large for the standard Vercel function bundle.
 
+The deployable imaging service lives in `xray-api/`. Deploy it as a separate
+Vercel project with that directory as the project root and set
+`VERCEL_SUPPORT_LARGE_FUNCTIONS=1`. Its public `/xray` endpoint should be used
+as the frontend's `XRAY_API_URL`.
+
 ## API overview
 
 | Route | Purpose |
