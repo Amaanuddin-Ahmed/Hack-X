@@ -18,7 +18,7 @@ from .xray_service import ImageValidationError, analyze_chest_xray
 ROOT = Path(__file__).resolve().parent
 HEART = joblib.load(ROOT / "heart_random_forest.pkl")
 OBESITY = joblib.load(ROOT / "obesity_random_forest.pkl")
-DIABETES = joblib.load(ROOT / "diabetes_random_forest (1).pkl")
+DIABETES = joblib.load(ROOT / "diabetes_random_forest.joblib")
 
 app = FastAPI(title="Vitalis model service", version="1.0.0")
 

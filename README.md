@@ -78,9 +78,9 @@ Diabetes and heart disease use positive-class probability. Obesity risk combines
 - Node.js `22.13.0` or newer
 - Python 3 with `venv`
 - A Gemini API key
-- The local diabetes model file: `models/diabetes_random_forest (1).pkl`
+- The compressed diabetes model included at `models/diabetes_random_forest.joblib`
 
-The diabetes model is intentionally ignored by Git because of its size. Place your local copy at the exact path above before starting the model service. The heart and obesity model artifacts are included in the repository.
+All three tabular model artifacts are included in the repository. The diabetes pipeline is stored with lossless Joblib/XZ compression, reducing it from roughly 185 MB to 21 MB without changing its predictions. The original uncompressed local file remains ignored.
 
 ### 1. Install dependencies
 
