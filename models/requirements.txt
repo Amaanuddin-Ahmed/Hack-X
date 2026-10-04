@@ -5,6 +5,3 @@ pandas==2.2.3
 joblib==1.5.3
 Pillow>=11.0.0
 numpy>=1.26.0
-torch>=2.2.0
-torchvision>=0.17.0
-torchxrayvision

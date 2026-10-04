@@ -12,8 +12,14 @@ import pandas as pd
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from .xray_schemas import XrayAnalysis, XrayRequest
-from .xray_service import ImageValidationError, analyze_chest_xray
+try:
+    # Package import used by local development from the repository root.
+    from .xray_schemas import XrayAnalysis, XrayRequest
+    from .xray_service import ImageValidationError, analyze_chest_xray
+except ImportError:
+    # Top-level import used when `models/` is the Vercel project root.
+    from xray_schemas import XrayAnalysis, XrayRequest
+    from xray_service import ImageValidationError, analyze_chest_xray
 
 ROOT = Path(__file__).resolve().parent
 HEART = joblib.load(ROOT / "heart_random_forest.pkl")

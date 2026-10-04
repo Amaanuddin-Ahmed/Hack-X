@@ -8,7 +8,10 @@ from io import BytesIO
 import numpy as np
 from PIL import Image, UnidentifiedImageError
 
-from .xray_schemas import Finding, HealthReport, XrayAnalysis
+try:
+    from .xray_schemas import Finding, HealthReport, XrayAnalysis
+except ImportError:
+    from xray_schemas import Finding, HealthReport, XrayAnalysis
 
 MODEL_NAME = "densenet121-res224-all"
 

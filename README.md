@@ -90,7 +90,7 @@ cd Hacktoberfest26
 npm install
 
 python3 -m venv .venv
-.venv/bin/pip install -r models/requirements.txt
+.venv/bin/pip install -r models/requirements-xray.txt
 ```
 
 ### 2. Configure the environment
@@ -125,6 +125,10 @@ Open the local URL shown in the terminal. For a quick tour, choose **Explore wit
 
 > [!NOTE]
 > TorchXRayVision downloads and caches the approximately 28 MB `densenet121-res224-all` checkpoint the first time an X-ray is analyzed.
+
+For a lightweight tabular-model deployment, use `models/requirements.txt`. The
+X-ray dependencies are intentionally isolated in `models/requirements-xray.txt`
+because PyTorch is too large for the standard Vercel function bundle.
 
 ## API overview
 
