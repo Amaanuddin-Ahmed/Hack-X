@@ -1,0 +1,5 @@
+[
+  {"id":"clear_pa_chest_xray","image":"01_clear_pa_chest_xray.png","purpose":"Baseline local model loading and structured score output"},
+  {"id":"non_chest_image","image":"02_non_chest_image.jpg","purpose":"Manual negative control; output must not be interpreted clinically"},
+  {"id":"low_quality_chest_xray","image":"03_low_quality_chest_xray.png","purpose":"Document limitations; do not use output for decisions"}
+]

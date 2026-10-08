@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Food Label Analysis</title>
+  <style>
+    :root { font-family: Inter, system-ui, sans-serif; color: #18212f; background:#f7f9fc; }
+    body { margin:0; }
+    main { max-width:900px; margin:48px auto; padding:0 20px; }
+    .card { background:white; border:1px solid #e5eaf1; border-radius:18px; padding:24px; box-shadow:0 8px 30px rgba(20,40,80,.06); }
+    h1 { margin-top:0; }
+    .drop { border:2px dashed #9cb8e6; border-radius:14px; padding:28px; text-align:center; background:#f8fbff; }
+    button { margin-top:16px; background:#2563eb; color:white; border:0; border-radius:10px; padding:12px 18px; font-weight:700; cursor:pointer; }
+    button:disabled { opacity:.55; cursor:not-allowed; }
+    img { display:none; max-width:100%; max-height:320px; margin:18px auto 0; border-radius:12px; }
+    pre { white-space:pre-wrap; overflow-wrap:anywhere; background:#101827; color:#e8eef9; border-radius:12px; padding:18px; min-height:120px; }
+    .muted { color:#667085; }
+    .status { margin-top:12px; font-weight:600; }
+  </style>
+</head>
+<body>
+<main>
+  <div class="card">
+    <h1>🍎 Food Label Analysis</h1>
+    <p class="muted">Upload one food/product image. This test only checks image → structured nutrition extraction. No health recommendation yet.</p>
+    <div class="drop">
+      <input id="file" type="file" accept="image/jpeg,image/png,image/webp" />
+      <br/>
+      <button id="analyze" disabled>Analyze with Gemma</button>
+      <div id="status" class="status"></div>
+      <img id="preview" alt="Preview" />
+    </div>
+    <h3>Structured result</h3>
+    <pre id="output">Waiting for an image…</pre>
+  </div>
+</main>
+<script>
+const fileInput = document.getElementById('file');
+const analyzeBtn = document.getElementById('analyze');
+const output = document.getElementById('output');
+const status = document.getElementById('status');
+const preview = document.getElementById('preview');
+
+fileInput.addEventListener('change', () => {
+  const file = fileInput.files[0];
+  analyzeBtn.disabled = !file;
+  if (file) {
+    preview.src = URL.createObjectURL(file);
+    preview.style.display = 'block';
+    output.textContent = 'Ready to analyze.';
+    status.textContent = '';
+  }
+});
+
+analyzeBtn.addEventListener('click', async () => {
+  const file = fileInput.files[0];
+  if (!file) return;
+  analyzeBtn.disabled = true;
+  status.textContent = 'Analyzing image…';
+  output.textContent = '';
+
+  const form = new FormData();
+  form.append('file', file);
+
+  try {
+    const res = await fetch('/api/v1/food/analyze', { method:'POST', body:form });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Analysis failed');
+    output.textContent = JSON.stringify(data, null, 2);
+    status.textContent = '✅ Smoke test completed';
+  } catch (err) {
+    output.textContent = err.message;
+    status.textContent = '❌ Smoke test failed';
+  } finally {
+    analyzeBtn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>

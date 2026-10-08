@@ -1,0 +1,7 @@
+fastapi==0.115.12
+uvicorn==0.34.2
+scikit-learn==1.6.1
+pandas==2.2.3
+joblib==1.5.3
+Pillow>=11.0.0
+numpy>=1.26.0
