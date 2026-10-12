@@ -62,3 +62,9 @@ next-env.d.ts
 
 
 models/diabetes_random_forest (1).pkl
+
+# Local presentation build previews and intermediate files
+.codex-pptx-build/
+# Separate local clones are not part of the Hack-X working tree
+/hacktoberfest26-mirror/
+/vitalis-site/
